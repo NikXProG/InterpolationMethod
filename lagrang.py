@@ -87,6 +87,10 @@ class LagrangeMethod(IInterpolationMethodService):
             for i in range(n):
                 l_basis = 1.0
                 for j in range(n):
+                    if self.xi[i] - self.xi[j] == 0:
+                        # Invalid grid function:  empty dot
+                        # xj and xi form zero and an error occurs ZeroDivisionError
+                        continue
                     if i != j:
                         l_basis *= (self.x[point_i] - self.xi[j]) / (self.xi[i] - self.xi[j])
                 polonium += l_basis * self.yi[i]
