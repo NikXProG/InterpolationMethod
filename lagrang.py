@@ -64,6 +64,45 @@ class IInterpolationMethodService(ABC):
         """realization methods of interpolation"""
 
 
+class NewtonMethod(IInterpolationMethodService):
+
+    def __init__(self, data):
+        if not data or len(data) < 3 or any(item is None for item in data[:3]):
+            raise Exception("Value cannot be None: the drawing service needs to determine the coordinates xi, yi, "
+                            "x and obtain an approximation of the points using interpolation methods.")
+        self.xi = data[0]
+        self.yi = data[1]
+        self.x = data[2]
+        self.divided_differences = self.calculate_divided_differences()
+
+    def calculate_divided_differences(self):
+        n = len(self.xi)
+        divided_diff = np.zeros((n, n))
+        divided_diff[:, 0] = self.yi
+
+        for j in range(1, n):
+            for i in range(n - j):
+                divided_diff[i][j] = (divided_diff[i + 1][j - 1] - divided_diff[i][j - 1]) / (self.xi[i + j] - self.xi[i])
+
+        return divided_diff
+
+    def interpolate(self):
+        approx_points = []
+        count_point = len(self.x)
+
+        for point_i in range(count_point):
+            x_value = self.x[point_i]
+            polynomial = self.divided_differences[0][0]
+            product = 1.0
+
+            for j in range(1, len(self.xi)):
+                product *= (x_value - self.xi[j - 1])
+                polynomial += self.divided_differences[0][j] * product
+
+            approx_points.append(polynomial)
+
+        return [self.x, approx_points]
+
 class LagrangeMethod(IInterpolationMethodService):
 
     def __init__(self, data):
@@ -100,19 +139,25 @@ class LagrangeMethod(IInterpolationMethodService):
 
 
 class PaintService:
+
+
     def __init__(self, data):
         if not data or len(data) < 2 or any(item is None for item in data[:2]):
             raise Exception("Value cannot be None")
         self.data_x = data[0]
         self.approx_points = data[1]
 
-    def paint(self):
-        plt.plot(self.data_x, self.approx_points)
+    def paint(self, title = '' , color = 'gray'):
+
+        plt.plot(self.data_x ,self.approx_points, color = color)
+        plt.title(title)
         plt.show()
 
 
 if __name__ == '__main__':
     reader = ReadInfoService(JsonReaderService("file.json"))
     parser = ParserGridService(reader.get_info())
-    result = LagrangeMethod(parser.parse()).interpolate()
-    PaintService(result).paint()
+    result_lagr = LagrangeMethod(parser.parse()).interpolate()
+    result_newton = NewtonMethod(parser.parse()).interpolate()
+    PaintService(result_newton).paint(color='orange', title='Интерполяция Ньютона')
+    PaintService(result_lagr).paint(color='lightblue',title='Интерполяция Лагранжа')
